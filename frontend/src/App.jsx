@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from './components/Navbar.jsx';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage.jsx';
@@ -11,7 +11,13 @@ import { useAuthStore } from './store/useAuthStore.js';
 
 
 const App = () => {
-  const { useAuth } = useAuthStore()
+  const { authUser, checkAuth } = useAuthStore()
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  console.log('Auth User');
   return (
     <div>
 
