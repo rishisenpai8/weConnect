@@ -13,9 +13,10 @@
   },
   "dependencies": {
     "axios": "^1.8.4",
+    "lucide-react": "^0.488.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.4.1",
+    "react-hot-toast": "^2.5.2",
     "react-router-dom": "^6.22.3",
     "zustand": "^5.0.3"
   },
@@ -24,7 +25,7 @@
     "@types/react-dom": "^18.2.21",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.18",
-    "daisyui": "^5.0.20",
+    "daisyui": "^5.0.23",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.6.0",

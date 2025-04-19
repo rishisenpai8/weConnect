@@ -12,7 +12,7 @@ const userSchema = z.object({
         .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
         .regex(/\d/, { message: "Password must contain at least one number" })
         .regex(/[@$!%*?&]/, { message: "Password must contain at least one special character" }),
-    fullname: z.string()
+    fullName: z.string()
 });
 
 const userSchemaSignin = z.object({
@@ -22,53 +22,48 @@ const userSchemaSignin = z.object({
         .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
         .regex(/\d/, { message: "Password must contain at least one number" })
         .regex(/[@$!%*?&]/, { message: "Password must contain at least one special character" }),
-
 });
 
-
 export const signup = async (req, res) => {
-    const { fullname, email, password, } = req.body
+    const { fullName, email, password } = req.body;
     try {
-        if (!fullname || !email || !password) console.log('Please provide all information');
-        const validation = userSchema.safeParse({ email, password, fullname });
+        if (!fullName || !email || !password) {
+            return res.status(400).json({ message: 'Please provide all information' });
+        }
+
+        const validation = userSchema.safeParse({ email, password, fullName });
         if (!validation.success) {
-            return res.status(400).json({
-                msg: 'Invalid Format'
-            })
+            const errorMessage = validation.error.errors[0]?.message || 'Invalid Format';
+            return res.status(400).json({ message: errorMessage });
         }
 
         const existingUser = await UserModel.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({
-                msg: 'Email Already exist'
-            })
+            return res.status(400).json({ message: 'Email already exists' });
         }
-        const hashPassword = await bcrypt.hash(password, 12);
 
+        const hashPassword = await bcrypt.hash(password, 12);
         const newUser = await UserModel.create({
-            email: email,
+            email,
             password: hashPassword,
-            fullname: fullname
-        })
+            fullName
+        });
 
         if (newUser) {
-            generateTokens(newUser._id, res)
-            // await newUser.save()
+            generateTokens(newUser._id, res);
             return res.status(201).json({
                 _id: newUser._id,
-                fullname: newUser.fullname,
+                fullName: newUser.fullName,
                 email: newUser.email,
                 profilePic: newUser.profilePic
-            })
-        } else {
-            console.log(`User didn't got signed up try again`);
-            res.status(500).json({ msg: 'Internal server Error', error: error.message })
+            });
         }
 
+        return res.status(500).json({ message: 'Failed to create user' });
     } catch (error) {
-        console.log('Something went wrong during signing up', error);
+        console.error('Error in signup:', error);
+        return res.status(500).json({ message: 'Internal server error', error: error.message });
     }
-
 }
 
 export const login = async (req, res) => {
@@ -100,7 +95,7 @@ export const login = async (req, res) => {
         generateTokens(user._id, res)
         res.status(200).json({
             _id: user._id,
-            fullname: user.fullname,
+            fullName: user.fullName,
             email: user.email,
             profilePic: user.profilePic
         })
@@ -112,10 +107,18 @@ export const login = async (req, res) => {
 
 export const logout = (req, res) => {
     try {
-        res.cookie('jwt', '', { maxAge: 0 })
-        console.log('logged out');
+        // Clear the jwt cookie
+        res.cookie('jwt', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 0
+        });
+
+        res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
-        console.log('internal server error: ', error.message)
+        console.log('Error in logout controller:', error.message);
+        res.status(500).json({ message: 'Internal server error during logout' });
     }
 }
 
@@ -160,7 +163,7 @@ export const checkAuth = (req, res) => {
 
         res.status(200).json({
             _id: user._id,
-            fullname: user.fullname,
+            fullName: user.fullName,
             email: user.email,
             profilePic: user.profilePic
         });
