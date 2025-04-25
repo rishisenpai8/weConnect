@@ -1,24 +1,86 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const ProfilePage = () => {
     const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
     const [selectedImg, setSelectedImg] = useState(null);
 
+    const compressImage = (base64String, maxWidth = 800) => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64String;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (maxWidth * height) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+        });
+    };
+
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // Validate file size (max 1MB)
+        if (file.size > 1024 * 1024) {
+            toast.error('File too large. Please select an image under 1MB');
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select a valid image file');
+            return;
+        }
+
         const reader = new FileReader();
 
-        reader.readAsDataURL(file);
-
         reader.onload = async () => {
-            const base64Image = reader.result;
-            setSelectedImg(base64Image);
-            await updateProfile({ profilePic: base64Image });
+            try {
+                let base64Image = reader.result;
+                console.log('Original image size:', base64Image.length);
+
+                // Compress the image
+                base64Image = await compressImage(base64Image);
+                console.log('Compressed image size:', base64Image.length);
+
+                // Set the local preview
+                setSelectedImg(base64Image);
+
+                const response = await updateProfile({ profilePic: base64Image });
+                console.log('Upload response:', response);
+
+                // Update the local state with the new profile picture URL from Cloudinary
+                if (response?.updateUser?.profilePic) {
+                    console.log('New profile picture URL:', response.updateUser.profilePic);
+                    setSelectedImg(response.updateUser.profilePic);
+                }
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                // Reset the selected image on error
+                setSelectedImg(authUser?.profilePic || null);
+            }
         };
+
+        reader.onerror = () => {
+            console.error('Error reading file');
+            toast.error('Error reading the image file');
+        };
+
+        reader.readAsDataURL(file);
     };
 
     const formatDate = (dateString) => {
@@ -40,8 +102,9 @@ const ProfilePage = () => {
     };
 
     // Add logging for debugging
-    console.log('User data:', authUser);
-    console.log('Created at:', authUser?.createdAt);
+    console.log('Current authUser:', authUser);
+    console.log('Selected image:', selectedImg);
+    console.log('Profile picture URL:', authUser?.profilePic);
 
     return (
         <div className="h-screen pt-20">
@@ -57,9 +120,13 @@ const ProfilePage = () => {
                     <div className="flex flex-col items-center gap-4">
                         <div className="relative">
                             <img
-                                src={selectedImg || authUser.profilePic || "/avatar.png"}
+                                src={selectedImg || authUser?.profilePic || "/avatar.png"}
                                 alt="Profile"
-                                className="size-32 rounded-full object-cover border-4 "
+                                className="size-32 rounded-full object-cover border-4"
+                                onError={(e) => {
+                                    console.error('Error loading profile image');
+                                    e.target.src = "/avatar.png";
+                                }}
                             />
                             <label
                                 htmlFor="avatar-upload"

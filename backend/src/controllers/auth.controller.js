@@ -130,30 +130,65 @@ export const logout = (req, res) => {
 export const updateProfile = async (req, res) => {
     try {
         const { profilePic } = req.body;
+        console.log('ProfilePic exists:', !!profilePic);
+        console.log('ProfilePic type:', typeof profilePic);
+        console.log('ProfilePic length:', profilePic?.length);
 
-        //we get his user_id from  req as the middleware used in updateProfile provides user info in req
-        const userId = req.user_id
+        // Get user ID from the request user object
+        const userId = req.user._id;
+        console.log('User ID:', userId);
 
-        if (!profilePic) {
-            return res.status(400).json({ msg: 'Profile pic is required' })
+        if (!userId) {
+            return res.status(401).json({ msg: 'User not authenticated' });
         }
 
-        //uploads the image to cloudinary 
-        const uploadResponse = await cloudinary.uploader.upload(profilePic)
+        if (!profilePic) {
+            return res.status(400).json({ msg: 'Profile pic is required' });
+        }
 
-        // updating User model, user proifle changed from empty string to secure link provided by cloudinary 
-        // new: true object makes findByIdAndUpdate function return the latest change made to it and not the previous. hover over it  for more detail
-        const updateUser = await UserModel.findByIdAndUpdate(userId, { profilePic: uploadResponse.secure_url }, { new: true })
-        res.status(200).json({
-            updateUser
-        })
+        if (!profilePic.startsWith('data:image/')) {
+            return res.status(400).json({ msg: 'Invalid image format. Please provide a valid base64 image.' });
+        }
 
+        try {
+            //uploads the image to cloudinary 
+            const uploadResponse = await cloudinary.uploader.upload(profilePic, {
+                resource_type: "auto",
+                folder: "profile_pics",
+                timeout: 60000 // Increase timeout to 60 seconds
+            });
+            console.log('Cloudinary upload successful:', uploadResponse.secure_url);
 
+            // updating User model, user proifle changed from empty string to secure link provided by cloudinary 
+            const updateUser = await UserModel.findByIdAndUpdate(
+                userId,
+                { profilePic: uploadResponse.secure_url },
+                { new: true }
+            );
 
+            if (!updateUser) {
+                console.error('User not found for ID:', userId);
+                return res.status(404).json({ msg: 'User not found' });
+            }
 
+            console.log('MongoDB update successful:', updateUser.profilePic);
+            res.status(200).json({
+                updateUser
+            });
+        } catch (cloudinaryError) {
+            console.error('Cloudinary upload error:', cloudinaryError);
+            return res.status(400).json({
+                msg: 'Failed to upload image to Cloudinary',
+                error: cloudinaryError.message,
+                details: cloudinaryError.error || 'No additional details available'
+            });
+        }
     } catch (error) {
-        console.log('something went wrong in update Profile route ');
-        return res.status(400).json({ msg: 'Internal server error update profile route controller', error })
+        console.error('Error in updateProfile:', error);
+        return res.status(500).json({
+            msg: 'Internal server error in update profile route',
+            error: error.message
+        });
     }
 }
 
