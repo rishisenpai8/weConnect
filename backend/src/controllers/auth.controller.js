@@ -165,10 +165,11 @@ export const checkAuth = (req, res) => {
             _id: user._id,
             fullName: user.fullName,
             email: user.email,
-            profilePic: user.profilePic
+            profilePic: user.profilePic,
+            createdAt: user.createdAt
         });
     } catch (error) {
-        console.log('Error in checkAuth controller:', error.message);
+        console.error('Error in checkAuth controller:', error);
         res.status(500).json({
             msg: 'Internal server error',
             error: error.message
