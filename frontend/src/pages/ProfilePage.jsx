@@ -21,6 +21,28 @@ const ProfilePage = () => {
         };
     };
 
+    const formatDate = (dateString) => {
+        if (!dateString) return 'Not available';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return 'Invalid date';
+            }
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (error) {
+            console.error('Date formatting error:', error);
+            return 'Invalid date';
+        }
+    };
+
+    // Add logging for debugging
+    console.log('User data:', authUser);
+    console.log('Created at:', authUser?.createdAt);
+
     return (
         <div className="h-screen pt-20">
             <div className="max-w-2xl mx-auto p-4 py-8">
@@ -84,11 +106,11 @@ const ProfilePage = () => {
                     </div>
 
                     <div className="mt-6 bg-base-300 rounded-xl p-6">
-                        <h2 className="text-lg font-medium  mb-4">Account Information</h2>
+                        <h2 className="text-lg font-medium mb-4">Account Information</h2>
                         <div className="space-y-3 text-sm">
                             <div className="flex items-center justify-between py-2 border-b border-zinc-700">
                                 <span>Member Since</span>
-                                <span>{authUser.createdAt?.split("T")[0]}</span>
+                                <span>{formatDate(authUser?.createdAt)}</span>
                             </div>
                             <div className="flex items-center justify-between py-2">
                                 <span>Account Status</span>
